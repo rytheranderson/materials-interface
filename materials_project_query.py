@@ -36,4 +36,4 @@ class mp_query():
 			structures.append(struct)
 	
 		return structures
-
+		

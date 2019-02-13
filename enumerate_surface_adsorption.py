@@ -150,15 +150,3 @@ class adsorbate_surface():
 
 		self.adsorbate_configuration_dict = ads_dict
 
-
-
-d = 1.1
-CO = Atoms('CO', positions=[(0, 0, 0), (0, 0, d)])
-N = Atoms('N', positions=[(0, 0, 0)])
-
-Pd = mp_query('Pd')
-pd100 = adsorbate_surface(Pd, (1,0,0), 4, 4)
-pd100.plot_ads_sites()
-pd100.make_supercell((2,2,1))
-pd100.add_adsorbate_atoms([(CO,0)], loading=0.5, name='bridge')
-
