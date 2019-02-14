@@ -214,9 +214,10 @@ class adsorbate_surface():
 					dists.sort()
 					dists = np.asarray([np.round(d, 1) for d in dists]) * 10
 					fp1 = int(np.average(dists))
-					fp2 = int(max(dists))
-					fp3 = int(min(dists))
-					fp = str(fp1) + '-' + str(fp2) + '-' + str(fp3)
+					fp2 = int(np.round(np.std(dists), 1) * 10)
+					fp3 = int(max(dists))
+					fp4 = int(min(dists))
+					fp = str(fp1) + '-' + str(fp2) + '-' + str(fp3) + '-' + str(fp4)
 
 					ads_dict[formula + '_' + plane_string + '_' + str(fractional_loading) + '_' + name + str(atype_counter) + '_' + sgs + '_' + fp] = atoms
 
