@@ -1,5 +1,14 @@
+import warnings
+
+def warn(*args, **kwargs):
+    pass
+
+warnings.warn = warn
+
 from matplotlib import pyplot as plt
 import itertools
+import scipy
+import re
 
 from pymatgen import Structure, MPRester, Molecule
 from pymatgen.analysis.adsorption import *
@@ -20,6 +29,42 @@ def isfloat(value):
 		return True
 	except ValueError:
 		return False
+
+def PBC3DF_sym(vec1, vec2):
+
+	dX,dY,dZ = vec1 - vec2
+			
+	if dX > 0.5:
+		s1 = 1
+		ndX = dX - 1.0
+	elif dX < -0.5:
+		s1 = -1
+		ndX = dX + 1.0
+	else:
+		s1 = 0
+		ndX = dX
+				
+	if dY > 0.5:
+		s2 = 1
+		ndY = dY - 1.0
+	elif dY < -0.5:
+		s2 = -1
+		ndY = dY + 1.0
+	else:
+		s2 = 0
+		ndY = dY
+	
+	if dZ > 0.5:
+		s3 = 1
+		ndZ = dZ - 1.0
+	elif dZ < -0.5:
+		s3 = -1
+		ndZ = dZ + 1.0
+	else:
+		s3 = 0
+		ndZ = dZ
+
+	return np.array([ndX,ndY,ndZ]), np.array([s1,s2,s3])
 
 class adsorbate_surface():
 
@@ -46,7 +91,7 @@ class adsorbate_surface():
 		self.blank_slab_ase    = ase_atoms
 		self.minimal_unit_cell = ase_atoms.get_cell().T
 		self.duplications      = (1,1,1)
-		self.plane             = plane   
+		self.plane             = plane
 
 	def plot_ads_sites(self, filename='ads_sites.tiff', size=(3,3)):
 
@@ -73,7 +118,7 @@ class adsorbate_surface():
 		self.blank_slab_ase = make_supercell(self.blank_slab_ase, P)
 		self.duplications = replicate
 
-	def add_adsorbate_atoms(self, adsorbate, loading='all', name='all'):
+	def add_adsorbate_atoms(self, adsorbate, loading='all', name='all', ):
 
 		"""
 			Places adsorbates according to loading. The ads parameter is
@@ -88,15 +133,19 @@ class adsorbate_surface():
 
 		duplications = self.duplications
 		unit_cell = self.minimal_unit_cell
+		repeat_unit_cell = self.blank_slab_ase.get_cell().T
+
+		inv_ruc = np.linalg.inv(repeat_unit_cell)
+		plane_string = ''.join(map(str, self.plane))
 
 		duplications = [[j for j in range(i)] for i in duplications]
 		translation_vecs = list(itertools.product(duplications[0], duplications[1], duplications[2]))
 		ads_positions = ads_sites[name]
 		all_combinations = [s for s in all_subsets(translation_vecs) if len(s) > 0]
+		monolayer_loading = float(max(map(len, all_combinations)))
 		
 		if isfloat(loading):
 
-			monolayer_loading = float(max(map(len, all_combinations)))
 			fractional_loadings = [abs(len(s)/monolayer_loading - loading) for s in all_combinations]
 			closest = min(set(fractional_loadings))
 			all_combinations = [all_combinations[i] for i in range(len(all_combinations)) if fractional_loadings[i] == closest]			
@@ -114,6 +163,8 @@ class adsorbate_surface():
 				adsorbate_combinations = itertools.product(adsorbate, repeat=loading)
 
 				for ads_comb in adsorbate_combinations:
+					
+					adsonly_positions = []
 					slab_coords = [(sl.symbol, sl.position) for sl in self.blank_slab_ase]
 					
 					for s,a in zip(subset, ads_comb):
@@ -134,19 +185,56 @@ class adsorbate_surface():
 
 						for e,c in zip(elems, positions):
 							slab_coords.append((e, c))
+							adsonly_positions.append(c)
 
 					atoms = Atoms()
 					for c in slab_coords:
 						atoms.append(Atom(c[0],c[1]))
 					
 					formula = atoms.get_chemical_formula()
-					atoms.set_cell(self.blank_slab_ase.get_cell())
+					atoms.set_cell(repeat_unit_cell)
 					struct = AseAtomsAdaptor.get_structure(atoms)
-					sgs = SpacegroupAnalyzer(struct).get_space_group_symbol()
+					sga = SpacegroupAnalyzer(struct, symprec=0.1)
+					sgs = sga.get_space_group_symbol()
+					sgn = sga.get_space_group_number()
 
-					plane_string = ''.join(map(str, self.plane))
-					
-					ads_dict[formula + '_' + plane_string + '_' + str(fractional_loading) + '_' + sgs] = atoms
+					adsonly_positions = np.asarray(adsonly_positions) - np.average(ads_positions, axis=0)
+
+					dists = []
+					for i in range(len(adsonly_positions)):
+						icoord = np.dot(inv_ruc, adsonly_positions[i])
+						for j in range(i + 1, len(adsonly_positions)):
+							jcoord = np.dot(inv_ruc, adsonly_positions[j])
+							fdist, sym = PBC3DF_sym(icoord,jcoord)
+							dist = np.linalg.norm(np.dot(repeat_unit_cell, fdist))
+							dists.append(dist)
+
+							#print icoord, jcoord, dist, sgs
+
+					dists.sort()
+					dists = np.asarray([np.round(d, 1) for d in dists]) * 10
+					fp1 = int(np.average(dists))
+					fp2 = int(max(dists))
+					fp3 = int(min(dists))
+					fp = str(fp1) + '-' + str(fp2) + '-' + str(fp3)
+
+					ads_dict[formula + '_' + plane_string + '_' + str(fractional_loading) + '_' + name + str(atype_counter) + '_' + sgs + '_' + fp] = atoms
 
 		self.adsorbate_configuration_dict = ads_dict
+
+#Testing
+from materials_project_query import mp_query
+from write_output_files import write_adsorption_configs
+
+q = mp_query('ghLai1BTnNsvWZPu')
+m = q.make_structures('Cu')[0]
+
+a = adsorbate_surface(m, (1,0,0), 4, 4)
+a.make_supercell((3,2,1))
+
+d = 1.1
+CO = Atoms('CO', positions=[(0, 0, 0), (0, 0, d)])
+N= Atoms('H', positions=[(0, 0, 0)])
+a.add_adsorbate_atoms( [(N, 0)], loading=0.5, name='ontop')
+write_adsorption_configs(a.adsorbate_configuration_dict)
 
