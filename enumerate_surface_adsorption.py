@@ -153,12 +153,17 @@ class adsorbate_surface():
 		ads_dict = {}
 		atype_counter = 0
 
+		fingerprints = dict((len(s), dict((k,[]) for k in range(1,231))) for s in all_combinations)
+		sg_counts    = dict((k,0) for k in range(1,231))
+
 		for pos in ads_positions:
 			atype_counter += 1
 
 			for subset in all_combinations:
 
 				loading = len(subset)
+				fp_dict = fingerprints[loading]
+
 				fractional_loading = int((loading/monolayer_loading)*100)
 				adsorbate_combinations = itertools.product(adsorbate, repeat=loading)
 
@@ -198,7 +203,7 @@ class adsorbate_surface():
 					sgs = sga.get_space_group_symbol()
 					sgn = sga.get_space_group_number()
 
-					adsonly_positions = np.asarray(adsonly_positions) - np.average(ads_positions, axis=0)
+					adsonly_positions = np.asarray(adsonly_positions) #- np.average(ads_positions, axis=0)
 
 					dists = []
 					for i in range(len(adsonly_positions)):
@@ -207,35 +212,59 @@ class adsorbate_surface():
 							jcoord = np.dot(inv_ruc, adsonly_positions[j])
 							fdist, sym = PBC3DF_sym(icoord,jcoord)
 							dist = np.linalg.norm(np.dot(repeat_unit_cell, fdist))
+							#dist = np.linalg.norm(fdist)
+							#print icoord, jcoord, dist
 							dists.append(dist)
 
-							#print icoord, jcoord, dist, sgs
+					dists.sort() 
 
-					dists.sort()
-					dists = np.asarray([np.round(d, 1) for d in dists]) * 10
-					fp1 = int(np.average(dists))
-					fp2 = int(np.round(np.std(dists), 1) * 10)
-					fp3 = int(max(dists))
-					fp4 = int(min(dists))
-					fp = str(fp1) + '-' + str(fp2) + '-' + str(fp3) + '-' + str(fp4)
+					index = 0
+					advance = True
+					for ind in range(len(fp_dict[sgn])):
+						fp = fp_dict[sgn][ind]
+						if len(fp) == len(dists):
+							if np.allclose(fp, dists):
+								index = ind
+								advance = False
+								break
+					index = str(index)
 
-					ads_dict[formula + '_' + plane_string + '_' + str(fractional_loading) + '_' + name + str(atype_counter) + '_' + sgs + '_' + fp] = atoms
+					if advance:
+						sg_counts[sgn] += 1
+						fp_dict[sgn].append(dists)
+
+					### used for debugging, if needed ###
+					#dists = np.asarray([np.round(d, 1) for d in dists]) * 10
+					#if len(dists) == 0:
+					#	fp1 = ''
+					#	fp2 = ''
+					#	fp3 = ''
+					#	fp4 = 'single'
+					#else:
+					#	fp1 = int(np.average(dists))
+					#	fp2 = int(np.round(np.std(dists), 1) * 10)
+					#	fp3 = int(max(dists))
+					#	fp4 = int(min(dists))
+					#fp = str(fp1) + '-' + str(fp2) + '-' + str(fp3) + '-' + str(fp4)
+					#ads_dict[formula + '_' + plane_string + '_' + str(fractional_loading) + '_' + name + str(atype_counter) + '_' + sgs + '_' + fp] = atoms
+
+					ads_dict[formula + '_' + plane_string + '_' + str(fractional_loading) + '_' + name + str(atype_counter) + '_' + sgs + '_' + index] = atoms
 
 		self.adsorbate_configuration_dict = ads_dict
 
-#Testing
-from materials_project_query import mp_query
-from write_output_files import write_adsorption_configs
-
-q = mp_query('ghLai1BTnNsvWZPu')
-m = q.make_structures('Cu')[0]
-
-a = adsorbate_surface(m, (1,0,0), 4, 4)
-a.make_supercell((3,2,1))
-
-d = 1.1
-CO = Atoms('CO', positions=[(0, 0, 0), (0, 0, d)])
-N= Atoms('H', positions=[(0, 0, 0)])
-a.add_adsorbate_atoms( [(N, 0)], loading=0.5, name='ontop')
-write_adsorption_configs(a.adsorbate_configuration_dict)
+### Testing
+#from materials_project_query import mp_query
+#from write_outputs import write_adsorption_configs
+#
+#q = mp_query('ghLai1BTnNsvWZPu')
+#m = q.make_structures('Cu')[0]
+#
+#a = adsorbate_surface(m, (1,0,0), 4, 4)
+#a.make_supercell((3,2,1))
+#
+#d = 1.1
+#CO = Atoms('CO', positions=[(0, 0, 0), (0, 0, d)])
+#N= Atoms('H', positions=[(0, 0, 0)])
+#a.add_adsorbate_atoms( [(N, 0)], loading=0.5, name='ontop')
+#write_adsorption_configs(a.adsorbate_configuration_dict)
 

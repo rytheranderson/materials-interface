@@ -85,7 +85,7 @@ struct = foo.read_cif()
 #from ase import Atoms
 #from ase.visualize import view
 #from grid_images import material_grid
-#from write_output_files import write_adsorption_configs
+#from write_outputs import write_adsorption_configs
 #
 #asf = AdsorbateSiteFinder(struct)
 #ads_sites = asf.find_adsorption_sites()
@@ -99,11 +99,4 @@ struct = foo.read_cif()
 #mat = material_grid(a.adsorbate_configuration_dict)
 #mat.build_grid()
 #view(mat.grid)
-
-
-
-
-
-
-
 		
