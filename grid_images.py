@@ -121,9 +121,9 @@ class material_grid:
 			l1 = lengths[grid_plane_dims[1]]
 
 			if l0 > max_0:
-				max_0 = l0 + 2.0
+				max_0 = l0 #+ 2.0
 			if l1 > max_1:
-				max_1 = l1 + 2.0
+				max_1 = l1 #+ 2.0
 
 		if square_grids:
 			max_0 = max(max_0, max_1)
@@ -207,24 +207,24 @@ class material_grid:
 
 
 ### Testing
-#from enumerate_surface_adsorption import adsorbate_surface
-#from materials_project_query import mp_query
-#from ase import Atom, Atoms
-#from write_outputs import write_adsorption_configs
-#
-#q = mp_query('ghLai1BTnNsvWZPu')
-#m = q.make_structures('Cu')[0]
-#
-#a = adsorbate_surface(m, (1,0,0), 4, 4)
-#a.make_supercell((3,2,1))
-#
-#d = 1.1
-#CO = Atoms('CO', positions=[(0, 0, 0), (0, 0, d)])
-#N= Atoms('H', positions=[(0, 0, 0)])
-#a.add_adsorbate_atoms( [(N, 0)], loading='all', name='ontop')
-##write_adsorption_configs(a.adsorbate_configuration_dict)
-#
-#mat = material_grid(a.adsorbate_configuration_dict)
-#grid = mat.build_grid(square_grids=True)
-#mat.view_grid()
+from enumerate_surface_adsorption import adsorbate_surface
+from materials_project_query import mp_query
+from ase import Atom, Atoms
+from write_outputs import write_adsorption_configs
+
+q = mp_query('ghLai1BTnNsvWZPu')
+m = q.make_structures('Cu')[0]
+
+a = adsorbate_surface(m, (1,0,0), 4, 4)
+a.make_supercell((3,3,1))
+
+d = 1.1
+CO = Atoms('CO', positions=[(0, 0, 0), (0, 0, d)])
+C = Atoms('C', positions=[(0, 0, 0)])
+a.enumerate_ads_chains( [(N, 0)], 2.031, 10, mode='exact')
+#write_adsorption_configs(a.adsorbate_configuration_dict)
+
+mat = material_grid(a.path_configuration_dict)
+grid = mat.build_grid(square_grids=True)
+mat.write_grid()
 

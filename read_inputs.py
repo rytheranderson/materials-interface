@@ -10,6 +10,12 @@ from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from pymatgen.io.vasp import Poscar
 from pymatgen.io.cif import CifFile
 from pymatgen.io.ase import AseAtomsAdaptor
+from ase.io import write
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+metals = ['V', 'Pd', 'Ru', 'Co', 'Cu', 'Ni', 'Fe', 'Au', 'Ag']
 
 class mp_query():
 
@@ -23,14 +29,17 @@ class mp_query():
 	
 		return material_ids
 	
-	def mp_structure(self, material_id):
+	def mp_structure(self, material_id, standardize=True):
 
 		struct = self.mpr.get_structure_by_material_id(material_id)
-		struct = SpacegroupAnalyzer(struct).get_conventional_standard_structure()
+
+		if standardize:
+			struct = SpacegroupAnalyzer(struct).get_conventional_standard_structure()
 	
 		return struct
 	
 	def make_structures(self, search):
+		
 		material_ids = self.find_access_strings(search)
 	
 		structures = []
@@ -39,6 +48,54 @@ class mp_query():
 			structures.append(struct)
 	
 		return structures
+
+	def search_summary(self, search, print_energies=True, barplot=False, write_files=False, format='cif', write_dict=False):
+		
+		data  = self.mpr.get_data(search)
+		energies = []
+
+		for datum in data:
+			f  = datum['pretty_formula']
+			sn = str(datum['spacegroup']['number'])
+			ss = datum['spacegroup']['symbol']
+			i  = datum['material_id']
+			te = float(datum['energy'])
+			ae = float(datum['energy_per_atom'])
+
+			struct = self.mp_structure(i, standardize=False)
+			ase_atoms = AseAtomsAdaptor.get_atoms(struct)
+			composition = ase_atoms.get_chemical_formula()
+
+			if write_files:
+				write(f + '_' + sn + '.' + format, ase_atoms, format=format)
+
+			energies.append((f, sn, ss, te, ae, composition))
+
+		energies.sort(key = lambda x: x[4])
+		
+		if print_energies:
+			print 'formula spacegroup_number spacegroup_symbol total_energy energy_per_atom composition'
+			for l in energies:
+				print '{:7} {:<17} {:<17} {:<12.5f} {:<15f} {:<11}'.format(*l)
+
+		if barplot:
+			
+			energies = np.asarray(energies)
+			epa = np.array(map(float, energies[:,4]))
+			epa -= min(epa)
+			xticks = [i + '_' + j for i,j in energies[:,0:2]]
+			ind = np.arange(len(energies))
+
+			fig = plt.figure()
+			p1 = plt.bar(ind, epa)
+			plt.ylabel('Relative energy per atom / eV')
+			plt.xlabel('Material')
+			plt.xticks(ind, xticks, rotation=90)
+			fig.set_size_inches(6.5,3)
+			plt.savefig(search + '.tiff', dpi=300, bbox_inches='tight')
+
+		if write_dict:
+			pass
 
 class file_read():
 
@@ -75,9 +132,6 @@ class file_read():
 
 		return struct, ase_atoms
 
-foo = file_read('foo.cif')
-struct = foo.read_cif()
-
 #testing 
 #from pymatgen.analysis.adsorption import *
 #import matplotlib.pyplot as plt
@@ -99,4 +153,10 @@ struct = foo.read_cif()
 #mat = material_grid(a.adsorbate_configuration_dict)
 #mat.build_grid()
 #view(mat.grid)
+
+q = mp_query('ghLai1BTnNsvWZPu')
+#structs = q.make_structures('Pd-H')
+q.search_summary('V-H', write_files=True, format='cif', barplot=True, write_dict=True)
+
+
 		
