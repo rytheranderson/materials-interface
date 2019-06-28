@@ -3,13 +3,15 @@ import re
 import numpy as np
 import glob
 
-from itertools import groupby
+from itertools import groupby, combinations
 from numpy import cross, eye, dot
 from scipy.linalg import expm, norm
 from ase.visualize import view
 from ase.io import write
 
 import matplotlib.pyplot as plt
+
+metals = ('Pd', 'V', 'Cu', 'Cr', 'Fe', 'Au', 'Ag')
 
 def R(axis, theta):
     """
@@ -89,7 +91,7 @@ class material_grid:
 	def __init__(self, mat_dict):
 		self.mat_dict = mat_dict
 
-	def build_grid(self, projection_vector=[0,0,1], realign=False, align_vec='a', square_grids=False):
+	def build_grid(self, projection_vector=[0,0,1], realign=False, align_vec='a', square_grids=False, duplicate_border_atoms=True, duplicate_dims=(0,1), duplicate_elems=metals, sep_dist=5.0):
 
 		atoms = Atoms()
 
@@ -100,7 +102,10 @@ class material_grid:
 		median = np.median(divisors)
 		dists = [(i, abs(divisors[i] - median)) for i in range(len(divisors))]
 		dists.sort(key = lambda x: x[1])
-		nrow, ncol = [divisors[i[0]] for i in dists[0:2]]
+		#nrow, ncol = [divisors[i[0]] for i in dists[0:2]]
+
+		nrow = 1
+		ncol = len(materials)
 
 		x = np.array([1,0,0])
 		y = np.array([0,1,0])
@@ -121,9 +126,9 @@ class material_grid:
 			l1 = lengths[grid_plane_dims[1]]
 
 			if l0 > max_0:
-				max_0 = l0 #+ 2.0
+				max_0 = l0 + sep_dist
 			if l1 > max_1:
-				max_1 = l1 #+ 2.0
+				max_1 = l1 + sep_dist
 
 		if square_grids:
 			max_0 = max(max_0, max_1)
@@ -155,10 +160,43 @@ class material_grid:
 
 				mat_name = materials[mat_count][1]
 				mat = mat_dict[mat_name]
+				elems = [a.symbol for a in mat]
 				grid_point = coord_grid[i,j]
+				
 				vecs = mat.positions
 				unit_cell = mat.get_cell().T
-				elems = [a.symbol for a in mat]
+				fvecs = np.dot(np.linalg.inv(unit_cell), vecs.T).T
+
+				if duplicate_border_atoms:
+
+					basis = [np.array([1,0,0]), np.array([0,1,0]), np.array([0,0,1])]
+					new_vecs = []
+
+					for elem,fcoord in zip(elems,fvecs):
+
+						if elem in duplicate_elems:
+
+							zero_threshold_indices = fcoord < 1e-4
+							fcoord[zero_threshold_indices] = 0.0
+							one_threshold_indices = abs(fcoord - 1.0) < 1e-4
+							fcoord[one_threshold_indices]  = 1.0
+							dup_vecs = [basis[dim] for dim in (0,1,2) if fcoord[dim] == 0.0]
+							combs = list(combinations(dup_vecs, 3)) + list(combinations(dup_vecs, 2))
+							
+							for comb in combs:
+								compound = np.array([0.0,0.0,0.0])
+								for vec in comb:
+									compound += vec
+								dup_vecs.append(compound)
+								
+							for vec in dup_vecs:
+								new_coord = [np.round(n, 6) for n in np.dot(unit_cell, fcoord + vec)]
+								new_vecs.append(new_coord)
+								elems.append(elem)
+					
+					new_vecs = np.asarray(new_vecs)
+					vecs = np.r_[vecs, new_vecs] 
+
 				com = np.average(vecs, axis=0)
 				plane_point = np.array([0.0,0.0,0.0])
 				plane_point[grid_plane_dims[0]] = grid_point[0]
@@ -186,7 +224,6 @@ class material_grid:
 				mat_count +=1
 
 		self.grid = atoms
-		return atoms
 
 	def write_grid(self, filename='grid.xyz'):
 
@@ -197,34 +234,76 @@ class material_grid:
 			print ftype, 'not supported for writing grids'
 			return 
 
-		grid = self.build_grid()
-		write(filename, grid)
+		write(filename, self.grid)
 
 	def view_grid(self):
 
-		grid = self.build_grid()
-		view(grid)
-
+		view(self.grid)
 
 ### Testing
-from enumerate_surface_adsorption import adsorbate_surface
-from materials_project_query import mp_query
+from enumerate_adsorption import surface_adsorption_generator, bulk_adsorption_generator
 from ase import Atom, Atoms
 from write_outputs import write_adsorption_configs
+from read_inputs import mp_query, file_read
+from enumerate_vacancies import vacancy_structure_generator
+
+H = Atoms('H', positions=[(0, 0, 0)])
+N = Atoms('N', positions=[(0, 0, 0)])
+C = Atoms('C', positions=[(0, 0, 0)])
 
 q = mp_query('ghLai1BTnNsvWZPu')
-m = q.make_structures('Cu')[0]
+m = q.make_structures('Pd')[1]
 
-a = adsorbate_surface(m, (1,0,0), 4, 4)
-a.make_supercell((3,3,1))
-
-d = 1.1
-CO = Atoms('CO', positions=[(0, 0, 0), (0, 0, d)])
-C = Atoms('C', positions=[(0, 0, 0)])
-a.enumerate_ads_chains( [(N, 0)], 2.031, 10, mode='exact')
-#write_adsorption_configs(a.adsorbate_configuration_dict)
-
-mat = material_grid(a.path_configuration_dict)
+a = surface_adsorption_generator(m, (1,0,0), 2, 2)
+a.make_supercell((4,4,1))
+a.enumerate_ads_config([(H,0),((H,0))], 8, name='bridge')
+print len(a.adsorbate_configuration_dict)
+mat = material_grid(a.adsorbate_configuration_dict)
 grid = mat.build_grid(square_grids=True)
-mat.write_grid()
+mat.view_grid()
+#mat.write_grid('NHPd.xyz')
+
+#a = surface_adsorption_generator(m, (1,1,1), 2, 2)
+#a.make_supercell((3,3,1))
+#a.enumerate_ads_chains([(C,0)], 1.615, 6)
+#mat = material_grid(a.path_configuration_dict)
+#grid = mat.build_grid(square_grids=True)
+#mat.view_grid()
+#mat.write_grid('Cchains.xyz')
+
+#a = bulk_adsorption_generator(m)
+#a.Voronoi_tessalate()
+#a.enumerate_ads_config([(C,0)], 12)
+#mat = material_grid(a.adsorbate_configuration_dict)
+#grid = mat.build_grid(square_grids=True)
+#mat.view_grid()
+#mat.write_grid('FCC_voronoi.xyz')
+
+#a = bulk_adsorption_generator(m)
+#a.Voronoi_tessalate()
+#a.enumerate_ads_config([(N,0)], 12)
+#write_adsorption_configs(a.adsorbate_configuration_dict, filetype='cif')
+
+#m = file_read('PdO.cif')
+#m, a = m.read_cif()
+#vsg = vacancy_structure_generator(m)
+#vsg.make_supercell((2,2,1))
+#vsg.make_vacancies(4, elements=['O'])
+#mat = material_grid(vsg.vacancy_dict)
+#write_adsorption_configs(vsg.vacancy_dict, filetype='cif')
+#grid = mat.build_grid(square_grids=True, duplicate_border_atoms=False, sep_dist=1.5)
+#mat.view_grid()
+#mat.write_grid('4vacancies.xyz')
+#write_adsorption_configs(vsg.vacancy_dict, filetype='vasp')
+
+#a = bulk_adsorption_generator(m)
+#a.Voronoi_tessalate()
+#a.enumerate_ads_config([(H,0)], 12)
+#mat = material_grid(a.adsorbate_configuration_dict)
+#grid = mat.build_grid(square_grids=True)
+##mat.view_grid()
+#mat.write_grid('12H.png')
+
+
+
 

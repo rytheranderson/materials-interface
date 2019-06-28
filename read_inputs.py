@@ -8,7 +8,7 @@ warnings.warn = warn
 from pymatgen import Structure, MPRester, Molecule
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from pymatgen.io.vasp import Poscar
-from pymatgen.io.cif import CifFile
+from pymatgen.io.cif import CifParser
 from pymatgen.io.ase import AseAtomsAdaptor
 from ase.io import write
 
@@ -49,7 +49,7 @@ class mp_query():
 	
 		return structures
 
-	def search_summary(self, search, print_energies=True, barplot=False, write_files=False, format='cif', write_dict=False):
+	def search_summary(self, search, print_energies=True, barplot=False, write_files=False, format='cif'):
 		
 		data  = self.mpr.get_data(search)
 		energies = []
@@ -94,9 +94,6 @@ class mp_query():
 			fig.set_size_inches(6.5,3)
 			plt.savefig(search + '.tiff', dpi=300, bbox_inches='tight')
 
-		if write_dict:
-			pass
-
 class file_read():
 
 	""" class for reading common file formats """
@@ -104,29 +101,23 @@ class file_read():
 	def __init__(self, filename):
 		self.filename = filename
 
-	def read_cif(self, standard_cell=True):
+	def read_cif(self):
 
 		""" reads cifs, returns both pymatgen structure and ase atoms object """
 
-		cif = CifFile.from_file(self.filename)
-		struct = cif.structure
-
-		if standard_cell:
-			struct = struct.get_conventional_standard_structure()
+		cif = CifParser(self.filename)
+		struct = cif.get_structures(primitive=False)[0]
 
 		ase_atoms = AseAtomsAdaptor.get_atoms(struct)
 
 		return struct, ase_atoms
 
-	def read_POSCAR(self, standard_cell=True):
+	def read_POSCAR(self):
 
 		""" reads POSCARS or CONTCARS, returns both pymatgen structure and ase atoms object """
 
 		poscar = Poscar.from_file(self.filename, check_for_POTCAR=False)
 		struct = poscar.structure
-
-		if standard_cell:
-			struct = struct.get_conventional_standard_structure()
 
 		ase_atoms = AseAtomsAdaptor.get_atoms(struct)
 
@@ -154,9 +145,9 @@ class file_read():
 #mat.build_grid()
 #view(mat.grid)
 
-q = mp_query('ghLai1BTnNsvWZPu')
-#structs = q.make_structures('Pd-H')
-q.search_summary('V-H', write_files=True, format='cif', barplot=True, write_dict=True)
+#q = mp_query('ghLai1BTnNsvWZPu')
+#structs = q.make_structures('N-V')
+#q.search_summary('N-V', write_files=True, format='cif', barplot=True, write_dict=True)
 
 
 		
