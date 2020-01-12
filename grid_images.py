@@ -8,6 +8,7 @@ from numpy import cross, eye, dot
 from scipy.linalg import expm, norm
 from ase.visualize import view
 from ase.io import write
+from ase import Atom, Atoms
 
 import matplotlib.pyplot as plt
 
@@ -231,7 +232,7 @@ class material_grid:
 		ftype = filename.split('.')[1]
 		
 		if ftype not in types:
-			print ftype, 'not supported for writing grids'
+			print(ftype, 'not supported for writing grids')
 			return 
 
 		write(filename, self.grid)
@@ -241,26 +242,26 @@ class material_grid:
 		view(self.grid)
 
 ### Testing
-from enumerate_adsorption import surface_adsorption_generator, bulk_adsorption_generator
-from ase import Atom, Atoms
-from write_outputs import write_adsorption_configs
-from read_inputs import mp_query, file_read
-from enumerate_vacancies import vacancy_structure_generator
+#from enumerate_adsorption import surface_adsorption_generator, bulk_adsorption_generator
+#from ase import Atom, Atoms
+#from write_outputs import write_adsorption_configs
+#from read_inputs import mp_query, file_read
+#from enumerate_vacancies import vacancy_structure_generator
+#
+#H = Atoms('H', positions=[(0, 0, 0)])
+#N = Atoms('N', positions=[(0, 0, 0)])
+#C = Atoms('C', positions=[(0, 0, 0)])
+#
+#q = mp_query('ghLai1BTnNsvWZPu')
+#m = q.make_structures('Pd')[1]
 
-H = Atoms('H', positions=[(0, 0, 0)])
-N = Atoms('N', positions=[(0, 0, 0)])
-C = Atoms('C', positions=[(0, 0, 0)])
-
-q = mp_query('ghLai1BTnNsvWZPu')
-m = q.make_structures('Pd')[1]
-
-a = surface_adsorption_generator(m, (1,0,0), 2, 2)
-a.make_supercell((4,4,1))
-a.enumerate_ads_config([(H,0),((H,0))], 8, name='bridge')
-print len(a.adsorbate_configuration_dict)
-mat = material_grid(a.adsorbate_configuration_dict)
-grid = mat.build_grid(square_grids=True)
-mat.view_grid()
+#a = surface_adsorption_generator(m, (1,0,0), 2, 2)
+#a.make_supercell((4,4,1))
+#a.enumerate_ads_config([(H,0),((H,0))], 8, name='bridge')
+#print len(a.adsorbate_configuration_dict)
+#mat = material_grid(a.adsorbate_configuration_dict)
+#grid = mat.build_grid(square_grids=True)
+#mat.view_grid()
 #mat.write_grid('NHPd.xyz')
 
 #a = surface_adsorption_generator(m, (1,1,1), 2, 2)

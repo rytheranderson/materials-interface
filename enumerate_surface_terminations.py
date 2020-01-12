@@ -57,13 +57,13 @@ class surface_termination_generator():
 
 		self.surface_dict = surface_dict
 
-from read_inputs import mp_query, file_read
-from write_outputs import write_adsorption_configs
-
-m = file_read('MOR_SI.cif')
-m, a = m.read_cif()
-stg = surface_termination_generator(m)
-stg.enumerate_surfaces(1, 1, 1, replicate=(1,1,1))
-write_adsorption_configs(stg.surface_dict, filetype='vasp')
+#from read_inputs import mp_query, file_read
+#from write_outputs import write_adsorption_configs
+#
+#m = file_read('MOR_SI.cif')
+#m, a = m.read_cif()
+#stg = surface_termination_generator(m)
+#stg.enumerate_surfaces(1, 1, 1, replicate=(1,1,1))
+#write_adsorption_configs(stg.surface_dict, filetype='vasp')
 
 

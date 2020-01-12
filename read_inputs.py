@@ -74,9 +74,9 @@ class mp_query():
 		energies.sort(key = lambda x: x[4])
 		
 		if print_energies:
-			print 'formula spacegroup_number spacegroup_symbol total_energy energy_per_atom composition'
+			print('formula spacegroup_number spacegroup_symbol total_energy energy_per_atom composition')
 			for l in energies:
-				print '{:7} {:<17} {:<17} {:<12.5f} {:<15f} {:<11}'.format(*l)
+				print('{:7} {:<17} {:<17} {:<12.5f} {:<15f} {:<11}'.format(*l))
 
 		if barplot:
 			
