@@ -8,15 +8,11 @@ warnings.warn = warn
 import itertools
 import numpy as np
 
-from pymatgen import Structure
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
-from pymatgen.core.surface import generate_all_slabs
 from pymatgen.io.ase import AseAtomsAdaptor
 
 from ase import Atom, Atoms
 from ase.build import make_supercell
-from ase.constraints import FixAtoms
-from ase.io import write
 
 def PBC3DF_sym(vec1, vec2):
 
@@ -95,7 +91,7 @@ def redundancy_check(blank_coords, adsonly_positions, fp_dict, repeat_unit_cell,
 
 	return advance, index, sgs, sgn, dists, atoms, formula
 
-class vacancy_structure_generator():
+class vacancy_structure_generator(object):
 
 	def __init__(self, struct):
 
@@ -155,5 +151,3 @@ class vacancy_structure_generator():
 #vsg.make_supercell((2,1,1))
 #vsg.make_vacancies(0, elements=['O'])
 #write_adsorption_configs(vsg.vacancy_dict, filetype='vasp')
-
-

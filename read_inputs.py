@@ -5,7 +5,7 @@ def warn(*args, **kwargs):
 
 warnings.warn = warn
 
-from pymatgen import Structure, MPRester, Molecule
+from pymatgen import MPRester
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from pymatgen.io.vasp import Poscar
 from pymatgen.io.cif import CifParser
@@ -17,7 +17,7 @@ import numpy as np
 
 metals = ['V', 'Pd', 'Ru', 'Co', 'Cu', 'Ni', 'Fe', 'Au', 'Ag']
 
-class mp_query():
+class mp_query(object):
 
 	def __init__(self, api_key):
 		self.mpr = MPRester(api_key)
@@ -87,7 +87,6 @@ class mp_query():
 			ind = np.arange(len(energies))
 
 			fig = plt.figure()
-			p1 = plt.bar(ind, epa)
 			plt.ylabel('Relative energy per atom / eV')
 			plt.xlabel('Material')
 			plt.xticks(ind, xticks, rotation=90)
@@ -123,31 +122,7 @@ class file_read():
 
 		return struct, ase_atoms
 
-#testing 
-#from pymatgen.analysis.adsorption import *
-#import matplotlib.pyplot as plt
-#from enumerate_surface_adsorption import adsorbate_surface
-#from ase import Atoms
-#from ase.visualize import view
-#from grid_images import material_grid
-#from write_outputs import write_adsorption_configs
-#
-#asf = AdsorbateSiteFinder(struct)
-#ads_sites = asf.find_adsorption_sites()
-#print ads_sites
-#a = adsorbate_surface(struct, (1,0,0), bulk=False)
-#a.make_supercell((1,1,1))
-#N= Atoms('N', positions=[(0, 0, 0)])
-#a.add_adsorbate_atoms( [(N, 0)], loading=1.0, name='hollow')
-#print a.adsorbate_configuration_dict
-#write_adsorption_configs(a.adsorbate_configuration_dict)
-#mat = material_grid(a.adsorbate_configuration_dict)
-#mat.build_grid()
-#view(mat.grid)
-
 #q = mp_query('ghLai1BTnNsvWZPu')
 #structs = q.make_structures('N-V')
 #q.search_summary('N-V', write_files=True, format='cif', barplot=True, write_dict=True)
-
-
 		

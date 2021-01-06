@@ -1,16 +1,10 @@
-import sys
-import re
 import numpy as np
-import glob
-
-from itertools import groupby, combinations
-from numpy import cross, eye, dot
+from itertools import combinations
+from numpy import cross, eye
 from scipy.linalg import expm, norm
 from ase.visualize import view
 from ase.io import write
 from ase import Atom, Atoms
-
-import matplotlib.pyplot as plt
 
 metals = ('Pd', 'V', 'Cu', 'Cr', 'Fe', 'Au', 'Ag')
 
@@ -79,7 +73,7 @@ def PBC3DF_sym(vec1, vec2):
 
 def divisorGenerator(n):
     large_divisors = []
-    for i in xrange(1, int(np.sqrt(n) + 1)):
+    for i in range(1, int(np.sqrt(n) + 1)):
         if n % i == 0:
             yield i
             if i*i != n:
@@ -87,7 +81,7 @@ def divisorGenerator(n):
     for divisor in reversed(large_divisors):
         yield divisor
 
-class material_grid:
+class material_grid(object):
 
 	def __init__(self, mat_dict):
 		self.mat_dict = mat_dict
@@ -103,26 +97,25 @@ class material_grid:
 		median = np.median(divisors)
 		dists = [(i, abs(divisors[i] - median)) for i in range(len(divisors))]
 		dists.sort(key = lambda x: x[1])
-		#nrow, ncol = [divisors[i[0]] for i in dists[0:2]]
+		nrow, ncol = [int(divisors[i[0]]) for i in dists[0:2]]
 
-		nrow = 1
-		ncol = len(materials)
+		#nrow = 1
+		#ncol = len(materials)
 
 		x = np.array([1,0,0])
 		y = np.array([0,1,0])
 		z = np.array([0,0,1])
 		basis = [x,y,z]
 
-		projection_vector = np.asarray(map(float, projection_vector))
+		projection_vector = np.asarray([float(v) for v in projection_vector])
 		grid_plane_dims = [dim for dim in range(len(basis)) if not np.array_equal(basis[dim], projection_vector)]
-		grid_plane_vectors = [basis[dim] for dim in grid_plane_dims]
 
 		max_0 = 0
 		max_1 = 0
 		
-		for entry, mat in mat_dict.iteritems():
+		for entry, mat in mat_dict.items():
 
-			lengths = map(np.linalg.norm, mat.get_cell())
+			lengths = list(map(np.linalg.norm, mat.get_cell()))
 			l0 = lengths[grid_plane_dims[0]]
 			l1 = lengths[grid_plane_dims[1]]
 
@@ -247,22 +240,6 @@ class material_grid:
 #from write_outputs import write_adsorption_configs
 #from read_inputs import mp_query, file_read
 #from enumerate_vacancies import vacancy_structure_generator
-#
-#H = Atoms('H', positions=[(0, 0, 0)])
-#N = Atoms('N', positions=[(0, 0, 0)])
-#C = Atoms('C', positions=[(0, 0, 0)])
-#
-#q = mp_query('ghLai1BTnNsvWZPu')
-#m = q.make_structures('Pd')[1]
-
-#a = surface_adsorption_generator(m, (1,0,0), 2, 2)
-#a.make_supercell((4,4,1))
-#a.enumerate_ads_config([(H,0),((H,0))], 8, name='bridge')
-#print len(a.adsorbate_configuration_dict)
-#mat = material_grid(a.adsorbate_configuration_dict)
-#grid = mat.build_grid(square_grids=True)
-#mat.view_grid()
-#mat.write_grid('NHPd.xyz')
 
 #a = surface_adsorption_generator(m, (1,1,1), 2, 2)
 #a.make_supercell((3,3,1))
@@ -271,7 +248,7 @@ class material_grid:
 #grid = mat.build_grid(square_grids=True)
 #mat.view_grid()
 #mat.write_grid('Cchains.xyz')
-
+#
 #a = bulk_adsorption_generator(m)
 #a.Voronoi_tessalate()
 #a.enumerate_ads_config([(C,0)], 12)
@@ -279,12 +256,12 @@ class material_grid:
 #grid = mat.build_grid(square_grids=True)
 #mat.view_grid()
 #mat.write_grid('FCC_voronoi.xyz')
-
+#
 #a = bulk_adsorption_generator(m)
 #a.Voronoi_tessalate()
 #a.enumerate_ads_config([(N,0)], 12)
 #write_adsorption_configs(a.adsorbate_configuration_dict, filetype='cif')
-
+#
 #m = file_read('PdO.cif')
 #m, a = m.read_cif()
 #vsg = vacancy_structure_generator(m)
@@ -296,7 +273,7 @@ class material_grid:
 #mat.view_grid()
 #mat.write_grid('4vacancies.xyz')
 #write_adsorption_configs(vsg.vacancy_dict, filetype='vasp')
-
+#
 #a = bulk_adsorption_generator(m)
 #a.Voronoi_tessalate()
 #a.enumerate_ads_config([(H,0)], 12)

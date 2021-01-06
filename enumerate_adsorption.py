@@ -7,30 +7,26 @@ warnings.warn = warn
 
 from matplotlib import pyplot as plt
 import networkx as nx
+import numpy as np
 import itertools
 from scipy.spatial import Voronoi
-import re
 import os
-from numba import jit
-import spglib as spg
 
 from pymatgen import Structure
-from pymatgen.analysis.adsorption import *
+from pymatgen.analysis.adsorption import AdsorbateSiteFinder, plot_slab
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from pymatgen.core.surface import generate_all_slabs
 from pymatgen.io.ase import AseAtomsAdaptor
 
 from ase import Atom, Atoms
-from ase.build import make_supercell, cut
+from ase.build import make_supercell
 from ase.constraints import FixAtoms
-from ase.io import read, write
+from ase.io import write
 
 from read_inputs import mp_query, file_read
 from write_outputs import write_adsorption_configs, write_ase_atoms
 
 from grid_images import material_grid
-
-symmetry_order_dict = {8:'tetra', 16:'fcc_octa'}
 
 def all_subsets(l):
 	return itertools.chain(*map(lambda x: itertools.combinations(l, x), range(0, len(l)+1)))
@@ -121,7 +117,7 @@ def redundancy_check(blank_coords, adsonly_positions, fp_dict, repeat_unit_cell,
 
 	return advance, index, sgs, sgn, dists, atoms, formula
 
-class surface_adsorption_generator():
+class surface_adsorption_generator(object):
 
 	""" 
 		Input is a pymatgen bulk structure, the desired surface plane, 
@@ -195,12 +191,10 @@ class surface_adsorption_generator():
 		duplications = self.duplications
 		unit_cell = self.minimal_unit_cell
 		repeat_unit_cell = self.blank_slab_ase.get_cell().T
-		inv_ruc = np.linalg.inv(repeat_unit_cell)
 		plane_string = ''.join(map(str, self.plane))
 
 		duplications = [[j for j in range(i)] for i in duplications]
 		translation_vecs = list(itertools.product(duplications[0], duplications[1], duplications[2]))
-		ads_positions = ads_sites[name]
 		all_combinations = [s for s in itertools.combinations(translation_vecs, loading)]
 
 		site_list = []
@@ -277,7 +271,6 @@ class surface_adsorption_generator():
 		duplications = self.duplications
 		unit_cell = self.minimal_unit_cell
 		repeat_unit_cell = self.blank_slab_ase.get_cell().T
-		inv_ruc =  np.linalg.inv(repeat_unit_cell)
 		plane_string = ''.join(map(str, self.plane))
 
 		dists = []
@@ -294,8 +287,6 @@ class surface_adsorption_generator():
 		duplications = [[j for j in range(i)] for i in duplications]
 		translation_vecs = list(itertools.product(duplications[0], duplications[1], duplications[2]))
 		
-		lattice_count = 0
-
 		path_dict = {}
 		ptype_counter = 0
 		
@@ -326,7 +317,7 @@ class surface_adsorption_generator():
 
 			def neighborhood(G, node, n):
 				path_lengths = nx.single_source_dijkstra_path_length(G, node)
-				return [node for node, length in path_lengths.iteritems() if length == n]
+				return [node for node, length in path_lengths.items() if length == n]
 
 			all_paths = []
 			all_cycles = []
@@ -410,7 +401,7 @@ class surface_adsorption_generator():
 
 def slab_directive_dynamics(mat_dict, by_layer=True, nlayers_frozen=1, by_elem=False, elems=['X'], tol=0.1):
 
-	for key, atoms in mat_dict.iteritems():
+	for key, atoms in mat_dict.items():
 
 		indices = []
 		if by_layer:
@@ -428,7 +419,7 @@ def slab_directive_dynamics(mat_dict, by_layer=True, nlayers_frozen=1, by_elem=F
 
 	return mat_dict
 
-class bulk_adsorption_generator():
+class bulk_adsorption_generator(object):
 
 	def __init__(self, struct, custom_sites=[]):
 
@@ -564,16 +555,8 @@ class bulk_adsorption_generator():
 				spectrum_atoms.set_cell(repeat_unit_cell.T)
 				spectrum_struct = AseAtomsAdaptor.get_structure(spectrum_atoms)
 				sga = SpacegroupAnalyzer(spectrum_struct, symprec=symmetry_tol)
-				pgs = sga.get_point_group_symbol()
 				symmetry_order = len(sga.get_space_group_operations())
-				
-				try:
-					symmetry_type = symmetry_order_dict[symmetry_order]
-					if symmetry_type == 'fcc_octa':
-						print(vert)
-				except KeyError:
-					continue
-					#symmetry_type = 'unknown' + str(symmetry_order)
+				symmetry_type = 'PG' + str(symmetry_order)
 				
 				vtypes.append((symmetry_type, vert))
 
@@ -606,7 +589,6 @@ class bulk_adsorption_generator():
 					site_dict[ty].append(coord)
 
 		ads_dict = {}
-		atype_counter = 0
 
 		fingerprints = dict((len(s), dict((k,[]) for k in range(1,231))) for s in all_combinations)
 		sg_counts    = dict((k,0) for k in range(1,231))		
@@ -627,7 +609,6 @@ class bulk_adsorption_generator():
 					if list(set(types))[0] != site:
 						continue
 
-			coords = [s[1] for s in subset]
 			ld = len(subset)
 			fp_dict = fingerprints[ld]
 
@@ -680,7 +661,7 @@ class bulk_adsorption_generator():
 
 		write(formula + suffix + '.' + filetype, bulk, format=filetype)
 
-class specified_adsorption_generator():
+class specified_adsorption_generator(object):
 
 	def __init__(self, struct):
 
@@ -696,8 +677,6 @@ class specified_adsorption_generator():
 	def enumerate_ads_config(self, adsorbate, loading, positions='mid_faces', coord_type='fractional', symmetry_tol=0.01):
 
 		unit_cell = self.minimal_unit_cell
-		basis = [np.array([1,0,0]), np.array([0,1,0]), np.array([0,0,1])]
-		neg_basis  = [-1 * b for b in basis]
 
 		if positions == 'mid_faces':
 			
@@ -746,7 +725,6 @@ class specified_adsorption_generator():
 						positions.append(atom.position)
 					elems = np.asarray(elems)
 					positions = np.asarray(positions)
-					trans = np.dot(unit_cell, np.asarray(p))
 					positions -= positions[shift_ind]
 					positions += p
 					
@@ -764,19 +742,11 @@ class specified_adsorption_generator():
 
 		self.adsorbate_configuration_dict = ads_dict
 
-element_symbol_key = {'N':5, 'H':1}
-atomic_number_key = {5:'N', 1:'H'}
-
 def fast_specified_adsorption_enumeration(sites, loading, atoms, adsorbate, outdir, occluded_sites, write_format='cif', suffix='BCC'):
 
 	lattice = atoms.get_cell()
 	sites = [s for s in sites if s not in occluded_sites]
 	site_indices = [i for i in range(len(sites))]
-
-	#if loading > 1:
-	#	distinct_combs = itertools.combinations(site_indices[1:], loading - 1)
-	#else:
-	#	distinct_combs = itertools.combinations(site_indices, loading - 8)
 
 	distinct_combs = itertools.combinations(site_indices, loading)
 
@@ -855,218 +825,4 @@ def fast_specified_adsorption_enumeration(sites, loading, atoms, adsorbate, outd
 
 		write(outdir + os.sep + comp + '_' + str(spgn) + '_' + str(index) + '_' + suffix + '.' + write_format, loaded_atoms, format=write_format)
 		return loaded_atoms
-
-#bcc_octa_sites_all = [[0.25, 0.25, 0.  ],
-#				  [0.25, 0.25, 0.5 ],
-#				  [0.25, 0.75, 0.0 ],
-#				  [0.25, 0.75, 0.5 ],
-#				  [0.75, 0.25, 0.0 ],
-#				  [0.75, 0.25, 0.5 ],
-#				  [0.75, 0.75, 0.0 ],
-#				  [0.75, 0.75, 0.5 ],
-#				  [0.0 , 0.25, 0.25],
-#				  [0.5 , 0.25, 0.25],
-#				  [0.0 , 0.75, 0.25],
-#				  [0.5 , 0.75, 0.25],
-#				  [0.0 , 0.25, 0.75],
-#				  [0.5 , 0.25, 0.75],
-#				  [0.0 , 0.75, 0.75],
-#				  [0.5 , 0.75, 0.75],
-#				  [0.25, 0.0 , 0.25],
-#				  [0.25, 0.5 , 0.25],
-#				  [0.75, 0.0 , 0.25],
-#				  [0.75, 0.5 , 0.25],
-#				  [0.25, 0.0 , 0.75],
-#				  [0.25, 0.5 , 0.75],
-#				  [0.75, 0.0 , 0.75],
-#				  [0.75, 0.5 , 0.75],
-#				  [0.5 , 0.25, 0.5 ],
-#				  [0.5 , 0.75, 0.5 ],
-#				  [0.25, 0.5 , 0.5 ],
-#				  [0.75, 0.5 , 0.5 ],
-#				  [0.5 , 0.5, 0.25 ],
-#				  [0.5 , 0.5, 0.75 ],
-#				  [0.25 ,0.0 ,  0.0 ],
-#				  [0.75 ,0.0 ,  0.0 ],
-#				  [0.0  ,0.25,  0.0 ],
-#				  [0.0  ,0.75,  0.0 ],
-#				  [0.0  ,0.0 ,  0.25],
-#				  [0.0  ,0.0 ,  0.75],
-#				  [0.25 ,0.5 ,  0.0],
-#				  [0.75 ,0.5 ,  0.0],
-#				  [0.0  ,0.25,  0.5],
-#				  [0.0  ,0.75,  0.5],
-#				  [0.5  ,0.0 ,  0.25],
-#				  [0.5  ,0.0 ,  0.75],
-#				  [0.5  ,0.25,  0.0],
-#				  [0.5  ,0.75,  0.0],
-#				  [0.0  ,0.5 ,  0.25],
-#				  [0.0  ,0.5 ,  0.75],
-#				  [0.25 ,0.0 ,  0.5],
-#				  [0.75 ,0.0 ,  0.5]
-#				  ]
-#
-#bcc_octa_sites_o0 = [[0.25, 0.25, 0.  ],
-#				  [0.25, 0.25, 0.5 ],
-#				  [0.25, 0.75, 0.0 ],
-#				  [0.25, 0.75, 0.5 ],
-#				  [0.75, 0.25, 0.0 ],
-#				  [0.75, 0.25, 0.5 ],
-#				  [0.75, 0.75, 0.0 ],
-#				  [0.75, 0.75, 0.5 ],
-#				  [0.0 , 0.25, 0.25],
-#				  [0.5 , 0.25, 0.25],
-#				  [0.0 , 0.75, 0.25],
-#				  [0.5 , 0.75, 0.25],
-#				  [0.0 , 0.25, 0.75],
-#				  [0.5 , 0.25, 0.75],
-#				  [0.0 , 0.75, 0.75],
-#				  [0.5 , 0.75, 0.75],
-#				  [0.25, 0.0 , 0.25],
-#				  [0.25, 0.5 , 0.25],
-#				  [0.75, 0.0 , 0.25],
-#				  [0.75, 0.5 , 0.25],
-#				  [0.25, 0.0 , 0.75],
-#				  [0.25, 0.5 , 0.75],
-#				  [0.75, 0.0 , 0.75],
-#				  [0.75, 0.5 , 0.75]]
-#
-#bcc_octa_sites_o1 = [[0.5 , 0.25, 0.5 ],
-#				  [0.5 , 0.75, 0.5 ],
-#				  [0.25, 0.5 , 0.5 ],
-#				  [0.75, 0.5 , 0.5 ],
-#				  [0.5 , 0.5, 0.25 ],
-#				  [0.5 , 0.5, 0.75 ],
-#				  [0.25 ,0.0 ,  0.0 ],
-#				  [0.75 ,0.0 ,  0.0 ],
-#				  [0.0  ,0.25,  0.0 ],
-#				  [0.0  ,0.75,  0.0 ],
-#				  [0.0  ,0.0 ,  0.25],
-#				  [0.0  ,0.0 ,  0.75],
-#				  [0.25 ,0.5 ,  0.0],
-#				  [0.75 ,0.5 ,  0.0],
-#				  [0.0  ,0.25,  0.5],
-#				  [0.0  ,0.75,  0.5],
-#				  [0.5  ,0.0 ,  0.25],
-#				  [0.5  ,0.0 ,  0.75],
-#				  [0.5  ,0.25,  0.0],
-#				  [0.5  ,0.75,  0.0],
-#				  [0.0  ,0.5 ,  0.25],
-#				  [0.0  ,0.5 ,  0.75],
-#				  [0.25 ,0.0 ,  0.5],
-#				  [0.75 ,0.0 ,  0.5]]
-#
-#occluded_sites_o0 = [[0.25000, 0.25000,  -0.00000],
-#[0.25000, 0.25000,  0.50000 ],
-#[0.25000, 0.75000,  -0.00000],
-#[0.25000, 0.75000,  0.50000 ],
-#[0.75000, 0.25000,  -0.00000],
-#[0.75000, 0.25000,  0.50000 ],
-#[0.75000, 0.75000,  -0.00000],
-#[0.75000, 0.75000,  0.50000 ]]
-#
-#occluded_sites_o1 = [[0.50000, 0.25000, 0.50000 ],
-#[0.50000, 0.75000, 0.50000 ],
-#[0.00000, 0.25000, -0.00000],
-#[0.00000, 0.75000, -0.00000],
-#[0.00000, 0.25000, 0.50000 ],
-#[0.00000, 0.75000, 0.50000 ],
-#[0.50000, 0.25000, -0.00000],
-#[0.50000, 0.75000, -0.00000]]
-#
-#occluded_sites=[[0.00,0.00,0.00]]
-#
-#loadings = [2]
-#cifs = ['V12Cr4_BCC.cif', 
-#		'V12Fe4_BCC.cif', 
-#		'V8Fe8_BCC.cif' , 
-#		'V8Cr8_BCC.cif' , 
-#		'V_BCC.cif' ]
-#cifs = ['V_BCC.cif']
-
-#mat_dict = {}
-#count = 0
-#for L in loadings:
-#	print L
-#	for cif in cifs:
-#		print cif
-#		struct, atoms = file_read(cif).read_cif()
-#		atoms = fast_specified_adsorption_enumeration(bcc_octa_sites_o0, L, atoms ,'N', '.', occluded_sites, write_format='cif')
-#		count += 1
-#		mat_dict[count] = atoms
-#
-#cifs = ['V4Fe12_BCC.cif', 
-#		'V4Cr12_BCC.cif']
-#
-#for L in loadings:
-#	print L
-#	for cif in cifs:
-#		print cif
-#		struct, atoms = file_read(cif).read_cif()
-#		fast_specified_adsorption_enumeration(bcc_octa_sites_o1, L, atoms ,'N', 'VxMyNz_3-16_CIFs', occluded_sites_o1, write_format='cif')
-
-### Testing
-#from read_inputs import mp_query, file_read
-#from write_outputs import write_adsorption_configs, write_ase_atoms
-#
-#H = Atoms('H', positions=[(0, 0, 0)])
-#N = Atoms('N', positions=[(0, 0, 0)])
-#
-#cifs = ['V12Cr4_FCC.cif', 'V12Cr4_BCC.cif', 
-#		'V12Fe4_BCC.cif', 'V4Fe12_FCC.cif', 
-#		'V4Fe12_BCC.cif', 'V12Fe4_FCC.cif', 
-#		'V8Fe8_FCC.cif' , 'V8Fe8_BCC.cif' , 
-#		'V4Cr12_BCC.cif', 'V_FCC.cif'     , 
-#		'V8Cr8_BCC.cif' , 'V_BCC.cif'     , 
-#		'V8Cr8_FCC.cif' , 'V4Cr12_FCC.cif']
-#
-#
-#fcc_octa_sites = [[-3.40757972e-16,  5.56500000e+00,  3.40757972e-16],
-#				  [-2.27171981e-16,  3.71000000e+00,  1.85500000e+00],
-#				  [0.,    0.,    1.855],
-#				  [-1.13585991e-16,  1.85500000e+00,  1.13585991e-16],
-#				  [5.56500000e+00, 0.00000000e+00, 3.40757972e-16],
-#				  [1.85500000e+00, 0.00000000e+00, 1.13585991e-16],
-#				  [5.56500000e+00, 3.71000000e+00, 5.67929953e-16],
-#				  [1.85500000e+00, 3.71000000e+00, 3.40757972e-16],
-#				  [5.565, 1.855, 1.855],
-#				  [3.71000000e+00, 1.85500000e+00, 3.40757972e-16],
-#				  [3.71,  0.,    1.855],
-#				  [1.855, 1.855, 1.855],
-#				  [1.855, 5.565, 1.855],
-#				  [3.71000000e+00, 5.56500000e+00, 5.67929953e-16],
-#				  [3.71,  3.71,  1.855],
-#				  [5.565, 5.565, 1.855]]
-#
-#
-#
-#loadings = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
-#loadings = [1,2,3]
-#for num in loadings:
-#	print num
-#	for f in cifs:
-#		if 'FCC' in f:
-#			fr = file_read(f)
-#			struct, atoms  = fr.read_cif()
-#			a = bulk_adsorption_generator(struct, custom_sites=fcc_octa_sites)
-#			a.Voronoi_tessalate()
-#			a.write_empty_bulk(filetype='vasp', suffix='_FCC')
-#			a.enumerate_ads_config([(N,0)], num, custom_sites_only=True, csite_name='fcc_octa')
-#			write_adsorption_configs(a.adsorbate_configuration_dict, filetype='vasp', suffix='_FCC')
-#		if 'BCC' in f:
-#			fr = file_read(f)
-#			struct, atoms  = fr.read_cif()
-#			a = bulk_adsorption_generator(struct, custom_sites=bcc_octa_sites)
-#			a.Voronoi_tessalate()
-#			a.write_empty_bulk(filetype='vasp', suffix='_BCC')
-#			a.enumerate_ads_config([(N,0)], num, custom_sites_only=True)
-#			configs = []
-#			
-#			#for ent in a.adsorbate_configuration_dict:
-#			#	configs.extend(a.adsorbate_configuration_dict[ent])
-#			#print len(configs)
-#
-#			write_adsorption_configs(a.adsorbate_configuration_dict, filetype='cif', suffix='_BCC')
-
-#def __init__(self, struct, plane, slab_depth, vacuum_size, max_normal_search=5, symmetrize=True):
 

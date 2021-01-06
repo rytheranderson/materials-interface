@@ -14,7 +14,7 @@ from ase.build import make_supercell
 from ase.constraints import FixAtoms
 from ase.io import write
 
-class surface_termination_generator():
+class surface_termination_generator(object):
 
 	def __init__(self, struct):
 
