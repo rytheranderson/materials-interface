@@ -6,13 +6,18 @@ from write_outputs import write_adsorption_configs
 import enumerate_adsorption as EA
 import enumerate_vacancies as EV
 from ase import Atoms
+from ase.io import read, write
+from pymatgen.io.ase import AseAtomsAdaptor
+
 
 H = Atoms('H', positions=[(0, 0, 0)])
 N = Atoms('N', positions=[(0, 0, 0)])
 C = Atoms('C', positions=[(0, 0, 0)])
 
-q = mp_query('ghLai1BTnNsvWZPu')
-m = q.make_structures('Pd')[0]
+q = mp_query('STRING')
+m = q.make_structures('Pd')[1]
+atoms = AseAtomsAdaptor.get_atoms(m)
+write('check.cif', atoms, format='cif')
 
 #a = EA.surface_adsorption_generator(m, plane=(1,0,0), slab_depth=2)
 #a.make_supercell((2,2,1))
@@ -37,7 +42,7 @@ m = q.make_structures('Pd')[0]
 #print(a.adsorbate_configuration_dict)
 #write_adsorption_configs(a.adsorbate_configuration_dict, filetype='cif')
 
-#q = mp_query('ghLai1BTnNsvWZPu')
+#q = mp_query('STRING')
 #m = q.make_structures('PdO')[1]
 #vsg = EV.vacancy_structure_generator(m)
 #vsg.make_supercell((1,1,1))

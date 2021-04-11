@@ -12,7 +12,6 @@ import itertools
 from scipy.spatial import Voronoi
 import os
 
-from pymatgen import Structure
 from pymatgen.analysis.adsorption import AdsorbateSiteFinder, plot_slab
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from pymatgen.core.surface import generate_all_slabs
@@ -22,11 +21,6 @@ from ase import Atom, Atoms
 from ase.build import make_supercell
 from ase.constraints import FixAtoms
 from ase.io import write
-
-from read_inputs import mp_query, file_read
-from write_outputs import write_adsorption_configs, write_ase_atoms
-
-from grid_images import material_grid
 
 def all_subsets(l):
 	return itertools.chain(*map(lambda x: itertools.combinations(l, x), range(0, len(l)+1)))
@@ -283,7 +277,6 @@ class surface_adsorption_generator(object):
 			dists.append((dist, pair))
 
 		dists = [d for d in dists if abs(d[0] - bond_length)/bond_length * 100 < percent_error]
-
 		duplications = [[j for j in range(i)] for i in duplications]
 		translation_vecs = list(itertools.product(duplications[0], duplications[1], duplications[2]))
 		
@@ -396,7 +389,7 @@ class surface_adsorption_generator(object):
 						fp_dict[sgn].append(dists)
 
 					path_dict[formula + '_' + plane_string + '_' + str(len(path)) + '_' + str(ptype_counter) + '_' + sgs + '_' + index] = atoms
-
+					
 		self.path_configuration_dict = path_dict
 
 def slab_directive_dynamics(mat_dict, by_layer=True, nlayers_frozen=1, by_elem=False, elems=['X'], tol=0.1):
