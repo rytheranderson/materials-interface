@@ -49,7 +49,7 @@ H = Atoms('H', positions=[(0, 0, 0)])
 C = Atoms('C', positions=[(0, 0, 0)])
 ```
 
-### Example 0, Single-Species Surface Adsorption
+### Example 0, Single-species Surface Adsorption
 
 ```
 N = Atoms('N', positions=[(0, 0, 0)])
