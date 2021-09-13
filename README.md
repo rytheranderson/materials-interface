@@ -45,19 +45,36 @@ m = q.make_structures('Pd')[0]
 ### Example 0, Single-Species Surface Adsorption
 
 ```
-N = Atoms('N', positions=[(0, 0, 0)])
-a = EA.surface_adsorption_generator(m, plane=(1,0,0), slab_depth=2)
-a.make_supercell((3,3,1))
-a.enumerate_ads_config([(N,0)], 3)
+N = Atoms('N', positions=[(0, 0, 0)]) # initialize the adsorbate as an  ASE atoms object
+a = EA.surface_adsorption_generator(m, plane=(1,0,0), slab_depth=2) # two layer slab of the 100 plane
+a.make_supercell((3,3,1)) # 3x3x1 surface
+a.enumerate_ads_config([(N,0)], 3) # enumerate all single-site adsorption configurations
 mat = material_grid(a.adsorbate_configuration_dict)
 grid = mat.build_grid(square_grids=True)
-mat.write_grid('ex0.png')
+mat.write_grid('ex0.png') # write the grid as a png, the configs can also be written individually as CIFs, POSCARs, etc.
 ```
 
-This builds all possible single-site (i.e. top, bridge, and hollow) configurations of a N atom adsorbed on a 3x3x1 Pd(100) surface
+This builds all possible single-site (i.e. top, bridge, and hollow) configurations of a N atom adsorbed on a 3x3x1 Pd(100) surface:
 
 <p align="center">
 <img src="ex0.png"/>
 </p>
 
+### Example 1, Multi-Species Surface Adsorption
 
+```
+N = Atoms('N', positions=[(0, 0, 0)])
+H = Atoms('H', positions=[(0, 0, 0)])
+a = EA.surface_adsorption_generator(m, plane=(1,0,0), slab_depth=2)
+a.make_supercell((2,2,1))
+a.enumerate_ads_config([(H,0),(N,0)], 2, name='bridge') # two adsorbates are used
+mat = material_grid(a.adsorbate_configuration_dict)
+grid = mat.build_grid(square_grids=True)
+mat.write_grid('ex1.png')
+```
+
+This builds all possible single-site (i.e. top, bridge, and hollow) configurations N and H atoms adsorbed on a 3x3x1 Pd(100) surface:
+
+<p align="center">
+<img src="ex1.png"/>
+</p>
