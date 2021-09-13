@@ -57,7 +57,7 @@ mat.write_grid('ex0.png')
 This builds all possible single-site (i.e. top, bridge, and hollow) configurations of a N atom adsorbed on a 3x3x1 Pd(100) surface
 
 <p align="center">
-<img src="./ex0.gif" width="400" height="300"/>
+<img src="./ex0.png" width="400" height="300"/>
 </p>
 
 
