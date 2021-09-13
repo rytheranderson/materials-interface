@@ -1,10 +1,10 @@
-# materials_interface
+# Materials Interface
 ## Authors
 
 - Ryther Anderson
 
 ## Motivation
-materials_interface is a Python 3 program used for automated enumeration of solid/surface/adsorbate systems for simulation initial inputs. 
+materials_interface is a collection of Python 3 programs used for automated enumeration of solid/surface/adsorbate systems for simulation inputs. 
 
 ## Usage
 Currently materials_interface is just a collection of useful functions and classes, probably the most useful ones are in the enumerate_adsorption.py module,
@@ -13,7 +13,7 @@ for enumerating vacancies, generating adsorbate "paths" (e.g. adsorbates in a li
 
 ## Setup
 
-I recommend making virtual environment for use with these scripts:
+I recommend making a virtual environment for use with these scripts:
 ```
 pip3 install virutalenv
 virtualenv env --python=python3
@@ -67,7 +67,7 @@ This builds all possible single-site (i.e. top, bridge, and hollow) configuratio
 <img src="ex0.png"/>
 </p>
 
-### Example 1, Multi-Species Surface Adsorption
+### Example 1, Multi-species Surface Adsorption
 
 ```
 a = EA.surface_adsorption_generator(m, plane=(1,0,0), slab_depth=2)
