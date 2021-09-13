@@ -7,9 +7,8 @@
 materials_interface is a collection of Python 3 programs used for automated enumeration of solid/surface/adsorbate systems for simulation inputs. 
 
 ## Usage
-Currently materials_interface is just a collection of useful functions and classes, probably the most useful ones are in the enumerate_adsorption.py module,
-these can me used to automatically generate all possible adsorption configurations in bulk metals or on a metal surface. There are also functions 
-for enumerating vacancies, generating adsorbate "paths" (e.g. adsorbates in a linked pattern), and visualization. Examples for common usages are provided below.
+Currently, materials_interface is just a collection of useful functions and classes, probably the most useful ones are in the enumerate_adsorption.py module,
+these can be used to automatically generate all possible adsorption configurations in bulk metals or on a metal surface. There are also functions for enumerating vacancies, generating adsorbate "paths" (e.g. adsorbates in a linked pattern), and visualization. Examples of common usages are provided below.
 
 ## Setup
 
@@ -61,7 +60,7 @@ grid = mat.build_grid(square_grids=True)
 mat.write_grid('ex0.png') # configs can also be written individually as CIFs, POSCARs, etc.
 ```
 
-This builds all possible single-site (i.e. top, bridge, and hollow) configurations of a N atom adsorbed on a 3x3x1 Pd(100) surface.
+This builds all possible single-site (i.e. top, bridge, and hollow) configurations of an N atom adsorbed on a 3x3x1 Pd(100) surface.
 
 <p align="center">
 <img src="ex0.png"/>
